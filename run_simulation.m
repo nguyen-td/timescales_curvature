@@ -2,7 +2,7 @@
 clear all
 clc
 
-seed = 42;
+seed = 30;
 rng(seed)
 
 %% Define random processes
@@ -12,7 +12,7 @@ n_trials = 100;          % number of trials
 
 % create time series
 T = (n_frames * frame_duration);  % duration (seconds)
-dt = 0.001;                       % bin size (in s)
+dt = 0.001;                       % simulation time steps (in s)
 x = linspace(0, T, T / dt);       % dummy data points
 
 % parameters of fast population
@@ -22,11 +22,11 @@ tau_f = 0.5;       % time scale of tuning curves
 
 % parameters of shared gain of fast population
 rho_g = 0.1;  % [min, max] variance of gain
-tau_g = 0.2;  % time scale of gain (seconds)
+tau_g = 0.02;  % time scale of gain (seconds)
 q_g = 2;      % power law exponent of gain covariance function
 
 %% Simulate neural responses
-[tuning_curves, gain, lambda, K_g] = simulate_mod_poisson(n_trials, x, n_neurons, rho_f, tau_f, rho_g, tau_g, q_g);
+[tuning_curves, gain, lambda, K_g] = compute_CMP(n_trials, x, n_neurons, rho_f, tau_f, rho_g, tau_g, q_g);
 
 %% Plot curves
 
@@ -79,12 +79,12 @@ sgtitle(['Trial ' num2str(itrial)])
 % figure; plot(x, gain)
 
 %% Compute curvature
-[mean_GP, var_GP, kappa] = mean_var_CMP(tuning_curves, rho_g, dt, tau_g, q_g);
+% [mean_GP, var_GP, kappa] = mean_var_CMP(tuning_curves, rho_g, dt, dt, tau_g, q_g);
 
 % fano_factor = mean(var_GP ./ mean_GP, 'all');
 % fano_factor = 1 + mean_GP .* (kappa - 1);
 % disp(['Fano factor: ' num2str(fano_factor)])
-disp(['Kappa ' num2str(kappa)])
+% disp(['Kappa ' num2str(kappa)])
 
 % % compute embedding on trial averages
 % y = 2 ./ mean(var_process, 3) .* asinh(mean(var_process, 3) .* sqrt(mean(lambda, 3))); % is an approximation, was derived for constant gain

@@ -1,3 +1,5 @@
+% Simulate spike trains arising from a simple modulated Poisson process.
+
 %% Setup
 clear all
 clc
