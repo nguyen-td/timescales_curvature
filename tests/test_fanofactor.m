@@ -4,13 +4,13 @@
 clear all
 clc
 
-seed = 3;
+seed = 50;
 rng(seed)
 
 %% Define random processes
 n_frames = 11;           % number of video frames
 frame_duration = 0.2;    % duration over with a single frame was shown (seconds)
-n_trials = 100;          % number of trials
+n_trials = 1000;         % number of trials
 
 % create time series
 T = (n_frames * frame_duration);  % duration (seconds)
@@ -19,8 +19,8 @@ x = linspace(0, T, T / dt);       % dummy data points
 
 % parameters of fast population
 n_neurons = 10;    % number of neurons within the population
-rho_f = 3;         % variance of tuning curves
-tau_f = 0.5;       % time scale of tuning curves
+rho_f = 2;         % variance of tuning curves
+tau_f = 0.2;       % time scale of tuning curves
 
 % parameters of shared gain of fast population
 rho_g = 0.1;  % [min, max] variance of gain
@@ -75,19 +75,20 @@ end
 
 mean_GP = {};
 var_GP = {};
-kappa = {};
+% kappa = {};
 for k = 1:length(bin_sizes_all)
-    [mean_GP{k}, var_GP{k}, kappa{k}] = mean_var_CMP(tuning_curves, rho_g, dt, bin_sizes_all(k), tau_g, q_g);
+    [mean_GP{k}, var_GP{k}] = mean_var_CMP(tuning_curves, rho_g, dt, T, bin_sizes_all(k), tau_g, q_g);
 end
 
 % compute Fano factor averaged over time bins and neurons for each bin size
 fano_CMP = zeros(n_neurons, numel(bin_sizes_all));
 for ibin = 1:numel(bin_sizes_all)
-    fano_CMP(:, ibin) = 1 + mean(var_GP{ibin}, 2, 'omitnan') .* (kappa{ibin} - 1);
+    % fano_CMP(:, ibin) = 1 + mean(var_GP{ibin}, 2, 'omitnan') .* (kappa{ibin} - 1);
+    fano_CMP(:, ibin) = mean(var_GP{ibin}, 2, 'omitnan') ./ mean(mean_GP{ibin}, 2, 'omitnan');
 end
 
 %% Plot
-itrial = 14;
+itrial = 1;
 n_plots = 5; % number of neurons to plot side by side
 
 figure(1)
@@ -120,6 +121,7 @@ end
 for im = 1:n_plots
     nexttile
     scatter(bin_sizes_all, fano_counts(im, :))
+    hold on
     ylabel('Fano Factor')
     xlabel('Time bin size (s)')
     axis square;
@@ -139,7 +141,41 @@ end
 
 %% Plot empirical vs. analytical solutions
 figure(2)
-tiledlayout(2, 2);
+tiledlayout(3, 2);
+
+% plot of the mean
+min_mean = min([cell2mat(mean_counts_bin), cell2mat(mean_GP)], [], 'all');
+max_mean = max([cell2mat(mean_counts_bin), cell2mat(mean_GP)], [], 'all');
+
+nexttile
+for ibin = 1:length(mean_counts_bin)
+    plot(linspace(0, max_mean, numel(mean_counts_bin{ibin}(im, :))), linspace(0, max_mean, numel(mean_counts_bin{ibin}(im, :))), 'k') 
+    hold on;
+    scatter(mean_counts_bin{ibin}(im, :), mean_GP{ibin}(im, :))
+    xlabel('Empirical mean (spikes)')
+    ylabel('Analytical mean (spikes)')
+    axis square;
+    title('Mean')
+    xlim([min_mean, max_mean])
+    ylim([min_mean, max_mean])
+end
+
+% plot of the variance
+min_var = min([cell2mat(var_counts_bin), cell2mat(var_GP)], [], 'all');
+max_var = max([cell2mat(var_counts_bin), cell2mat(var_GP)], [], 'all');
+
+nexttile
+for ibin = 1:length(mean_counts_bin)
+    plot(linspace(0, max_var, numel(var_counts_bin{ibin}(im, :))), linspace(0, max_var, numel(var_counts_bin{ibin}(im, :))), 'k') 
+    hold on;
+    scatter(var_counts_bin{ibin}(im, :), var_GP{ibin}(im, :))
+    xlabel('Empirical variance (spikes^{2})')
+    ylabel('Analytical variance (spikes^{2})')
+    axis square;
+    title('Variance')
+    xlim([min_var, max_var])
+    ylim([min_var, max_var])
+end
 
 % empirical Fano factor
 nexttile
@@ -157,28 +193,28 @@ ylabel('Fano Factor')
 xlabel('Time bin size (s)')
 axis square;
 
-% plot of the mean
-nexttile
-for ibin = 1:length(mean_counts_bin)
-    hold on;
-    scatter(mean_counts_bin{ibin}(im, :), mean_GP{ibin}(im, :))
-    xlabel('Empirical mean (spikes)')
-    ylabel('Analytical mean (spikes)')
-    axis square;
-    title('Mean')
-    xlim([min([cell2mat(mean_counts_bin), cell2mat(mean_GP)], [], 'all'), max([cell2mat(mean_counts_bin), cell2mat(mean_GP)], [], 'all')])
-    ylim([min([cell2mat(mean_counts_bin), cell2mat(mean_GP)], [], 'all'), max([cell2mat(mean_counts_bin), cell2mat(mean_GP)], [], 'all')])
-end
+% compare empirical with analytical Fano factor
+fano_counts_sorted = sort(mean(fano_counts, 1));
+fano_CMP_sorted = sort(mean(fano_CMP, 1));
 
-% plot of the variance
 nexttile
-for ibin = 1:length(mean_counts_bin)
-    hold on;
-    scatter(var_counts_bin{ibin}(im, :), var_GP{ibin}(im, :))
-    xlabel('Empirical variance (spikes^{2})')
-    ylabel('Analytical variance (spikes^{2})')
-    axis square;
-    title('Variance')
-    xlim([min([cell2mat(var_counts_bin), cell2mat(var_GP)], [], 'all'), max([cell2mat(var_counts_bin), cell2mat(var_GP)], [], 'all')])
-    ylim([min([cell2mat(var_counts_bin), cell2mat(var_GP)], [], 'all'), max([cell2mat(var_counts_bin), cell2mat(var_GP)], [], 'all')])
-end
+plot(bin_sizes_all, fano_counts_sorted, 'LineWidth', 1.5) 
+hold on;
+plot(bin_sizes_all, fano_CMP_sorted, 'LineWidth', 1.5) 
+title('Empirical Fano factor (neuron average)')
+ylabel('Fano Factor')
+xlabel('Time bin size (s)')
+axis square;
+
+legend('Empirical', 'Analytical')
+
+nexttile
+scatter(bin_sizes_all, mean(fano_counts, 1)) 
+hold on;
+scatter(bin_sizes_all, mean(fano_CMP, 1)) 
+title('Empirical Fano factor (neuron average)')
+ylabel('Fano Factor')
+xlabel('Time bin size (s)')
+axis square;
+
+legend('Empirical', 'Analytical')

@@ -15,33 +15,37 @@
 %   var_GP        - (n_neurons x length(x) / bin_factor) Variance per time bin
 %   kappa         - [double] Fluctuation factor
 
-function [mean_GP, var_GP, kappa] = mean_var_CMP(tuning_curves, rho_g, dt, bin_size, tau_g, q_g)
+function [mean_GP, var_GP] = mean_var_CMP(tuning_curves, rho_g, dt, T, bin_size, tau_g, q_g)
     
-    % Tuning curves are equal across trials
+    % tuning curves are equal across trials
     tuning_curves = squeeze(tuning_curves(:, :, 1)); 
 
-     % Downsampling
+     % downsampling
     bin_factor = bin_size / dt;
-    signal_reshaped = reshape(tuning_curves, size(tuning_curves, 1), bin_factor, []);  % (n_neurons x bin_factor x length(x)/bin_factor)
-    tuning_curves_new = squeeze(mean(signal_reshaped, 2));
+    tuning_curves_reshaped = reshape(tuning_curves, size(tuning_curves, 1), bin_factor, []);  % (n_neurons x bin_factor x length(x)/bin_factor)
     
-    % Compute mean
-    mean_GP = tuning_curves_new .* exp(rho_g/2) * bin_size;
+    % compute mean
+    mean_GP = squeeze(exp(rho_g/2) .* sum(tuning_curves_reshaped, 2)) * dt;
 
-    % Compute variance
-    kappa = compute_kappa(bin_size, tau_g, rho_g, q_g);
-    var_GP = mean_GP + mean_GP.^2 .* (kappa - 1);
-
+    % compute variance
+    gamma = compute_gamma(tuning_curves, tuning_curves_reshaped, bin_factor, T, tau_g, rho_g, q_g, dt);
+    var_GP = mean_GP + gamma;
 end
 
-function kappa = compute_kappa(bin_size, tau_g, rho_g, q_g)
-
-    % grid points
-    h = bin_size / 10000; % sampling interval to discretize integral
-    t = 0:h:bin_size;
-
-    [T1, T2] = meshgrid(t, t);
+function gamma = compute_gamma(tuning_curves, tuning_curves_reshaped, bin_factor, T, tau_g, rho_g, q_g, dt)
     
-    vals = exp(epl_kernel(T1, T2, rho_g, tau_g, q_g));
-    kappa = (h^2 / bin_size^2) * sum(vals(:));
+    time_total = linspace(0, T, size(tuning_curves, 2));
+    time_bins = reshape(time_total, bin_factor, []);
+    [n_neurons, bin_size, ~] = size(tuning_curves_reshaped);
+
+    gamma = zeros(n_neurons, size(time_bins, 2));
+    for ibin = 1:size(gamma, 2)
+
+        % generate grid points
+        [T1, T2] = meshgrid(time_bins(:, ibin), time_bins(:, ibin));
+
+        K_g = exp(epl_kernel(T1, T2, rho_g, tau_g, q_g));
+        tuning_squared = reshape(tuning_curves_reshaped(:, :, ibin), [n_neurons, bin_size, 1]) .* reshape(tuning_curves_reshaped(:, :, ibin), [n_neurons, 1, bin_size]);
+        gamma(:, ibin) = exp(rho_g) * dt^2 * sum(tuning_squared .* (permute(repmat(K_g, 1, 1, n_neurons), [3, 2, 1]) - 1), [2, 3]); 
+    end
 end

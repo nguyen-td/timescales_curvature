@@ -2,13 +2,13 @@
 clear all
 clc
 
-seed = 30;
+seed = 3;
 rng(seed)
 
 %% Define random processes
 n_frames = 11;           % number of video frames
 frame_duration = 0.2;    % duration over with a single frame was shown (seconds)
-n_trials = 100;          % number of trials
+n_trials = 1000;         % number of trials
 
 % create time series
 T = (n_frames * frame_duration);  % duration (seconds)
@@ -17,16 +17,16 @@ x = linspace(0, T, T / dt);       % dummy data points
 
 % parameters of fast population
 n_neurons = 10;    % number of neurons within the population
-rho_f = 1;         % variance of tuning curves
-tau_f = 0.5;       % time scale of tuning curves
+rho_f = 2;         % variance of tuning curves
+tau_f = 0.2;       % time scale of tuning curves
 
 % parameters of shared gain of fast population
 rho_g = 0.1;  % [min, max] variance of gain
-tau_g = 0.02;  % time scale of gain (seconds)
+tau_g = 0.2;  % time scale of gain (seconds)
 q_g = 2;      % power law exponent of gain covariance function
 
 %% Simulate neural responses
-[tuning_curves, gain, lambda, K_g] = compute_CMP(n_trials, x, n_neurons, rho_f, tau_f, rho_g, tau_g, q_g);
+[tuning_curves, gain, lambda] = compute_CMP(n_trials, x, n_neurons, rho_f, tau_f, rho_g, tau_g, q_g);
 
 %% Plot curves
 
@@ -73,20 +73,17 @@ lgd_lambda.Box = 'off';
 
 sgtitle(['Trial ' num2str(itrial)])
 
-% % compute gain and autocorrelation
-% delta = linspace(-T, T, 2 * length(x) + 1);
-% figure; plot(autocorr_g(delta, tau_g, q_g))
-% figure; plot(x, gain)
-
 %% Compute curvature
-% [mean_GP, var_GP, kappa] = mean_var_CMP(tuning_curves, rho_g, dt, dt, tau_g, q_g);
 
-% fano_factor = mean(var_GP ./ mean_GP, 'all');
-% fano_factor = 1 + mean_GP .* (kappa - 1);
-% disp(['Fano factor: ' num2str(fano_factor)])
-% disp(['Kappa ' num2str(kappa)])
+% generate tuning curves, gains, and rate functions
+[tuning_curves, gain, lambda, K_g] = compute_CMP(n_trials, x, n_neurons, rho_f, tau_f, rho_g, tau_g, q_g);
 
-% % compute embedding on trial averages
-% y = 2 ./ mean(var_process, 3) .* asinh(mean(var_process, 3) .* sqrt(mean(lambda, 3))); % is an approximation, was derived for constant gain
-% c = compute_trajectory_pixel(reshape(y, [1, size(y, 1), size(y, 2)]));
-% disp(['Average curvature: ' num2str(mean(rad2deg(c))) ' degrees'])
+% compute mean and variances
+bin_size = frame_duration;
+[mean_lambda, var_lambda] = mean_var_CMP(tuning_curves, rho_g, dt, T, bin_size, tau_g, q_g);
+
+
+% compute embedding on trial averages
+y = 2 ./ var_GP .* asinh(mean_GP) .* sqrt(mean(lambda, 3))); % is an approximation, was derived for constant gain
+c = compute_trajectory_pixel(reshape(y, [1, size(y, 1), size(y, 2)]));
+disp(['Average curvature: ' num2str(mean(rad2deg(c))) ' degrees'])

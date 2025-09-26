@@ -17,7 +17,7 @@
 %   lambda        - (n_neurons x length(x) x n_trials) Array of average firing rates
 %   K_g           - (length(x) x length(x)) Covariance matrix of gain realizations 
 
-function [tuning_curves, gain, lambda, K_g] = compute_CMP(n_trials, x, n_neurons, rho_f, tau_f, rho_g, tau_g, q_g)    
+function [tuning_curves, gain, lambda, K_g] = compute_CMP(n_trials, x, n_neurons, rho_f, tau_f, rho_g, tau_g, q_g)   
 
     % define mean vector and covariance function for gain
     % kernel_g = @(t1, t2, rho, tau, q) rho * exp(-1/2 * abs((t1 - t2) / tau).^q); % exponentiated power law (EPL) kernel

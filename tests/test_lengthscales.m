@@ -9,7 +9,7 @@ n_trials = 1000;         % number of trials
 
 % create time series
 T = (n_frames * frame_duration);  % duration (seconds)
-dt = [0.1, 0.002, 0.004];  % bin size (in s)
+dt = [0.1, 0.002, 0.003];  % bin size (in s)
 x = {};                           % time bins (unit: T / dt)
 for i=1:length(dt)
     x{i} = linspace(0, T, T / dt(i));       
@@ -32,8 +32,9 @@ lambda = {};
 K_g = {};
 
 for i=1:length(dt)
+    rng(42)
     % [tuning_curves_dt, gain_dt, lambda_dt, K_g_dt] = simulate_mod_poisson(n_trials, x{i}, n_neurons, rho_f, tau_f, rho_g, tau_g, q_g);
-    [tuning_curves_dt, gain_dt, lambda_dt, ~] = simulate_mod_poisson(n_trials, x{i}, n_neurons, rho_f, tau_f, rho_g, tau_g, q_g);
+    [tuning_curves_dt, gain_dt, lambda_dt, ~] = compute_CMP(n_trials, x{i}, n_neurons, rho_f, tau_f, rho_g, tau_g, q_g)  ;  
 
     tuning_curves{i} = mean(tuning_curves_dt, 3); % save trial average
     gain{i} = mean(gain_dt, 3); % save trial average
