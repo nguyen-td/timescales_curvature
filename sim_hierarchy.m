@@ -23,7 +23,7 @@ tau_f = linspace(0.001, 2, 100);  % time scale of tuning curves
 
 % parameters of shared gain of fast population
 rho_g = 0.1;           % [min, max] variance of gain
-tau_g = [0.002, 0.2];  % time scale of gain (seconds)
+tau_g = [0.002, 0.02];  % time scale of gain (seconds)
 q_g = 2;               % power law exponent of gain covariance function
 
 %% Simulate neural responses
