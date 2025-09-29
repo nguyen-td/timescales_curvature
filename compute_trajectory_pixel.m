@@ -4,7 +4,7 @@
 %   frame_mat - [n_pixels x n_pixels x n_frames] video array
 %
 % Outputs:
-%   c        - [n_frames] Estimated curvatures in rads
+%   c        - [n_frames - 2] Estimated curvatures in rads
 
 function c = compute_trajectory_pixel(frame_mat)
 

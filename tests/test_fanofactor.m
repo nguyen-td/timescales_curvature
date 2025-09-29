@@ -4,7 +4,7 @@
 clear all
 clc
 
-seed = 50;
+seed = 3;
 rng(seed)
 
 %% Define random processes
@@ -19,7 +19,7 @@ x = linspace(0, T, T / dt);       % dummy data points
 
 % parameters of fast population
 n_neurons = 10;    % number of neurons within the population
-rho_f = 2;         % variance of tuning curves
+rho_f = 3;         % variance of tuning curves
 tau_f = 0.2;       % time scale of tuning curves
 
 % parameters of shared gain of fast population
@@ -73,18 +73,18 @@ end
 
 %% Compute means and variances from analytical expressions
 
-mean_GP = {};
-var_GP = {};
+mean_lambda = {};
+var_lambda = {};
 % kappa = {};
 for k = 1:length(bin_sizes_all)
-    [mean_GP{k}, var_GP{k}] = mean_var_CMP(tuning_curves, rho_g, dt, T, bin_sizes_all(k), tau_g, q_g);
+    [mean_lambda{k}, var_lambda{k}] = mean_var_CMP(tuning_curves, rho_g, dt, T, bin_sizes_all(k), tau_g, q_g);
 end
 
 % compute Fano factor averaged over time bins and neurons for each bin size
 fano_CMP = zeros(n_neurons, numel(bin_sizes_all));
 for ibin = 1:numel(bin_sizes_all)
-    % fano_CMP(:, ibin) = 1 + mean(var_GP{ibin}, 2, 'omitnan') .* (kappa{ibin} - 1);
-    fano_CMP(:, ibin) = mean(var_GP{ibin}, 2, 'omitnan') ./ mean(mean_GP{ibin}, 2, 'omitnan');
+    % fano_CMP(:, ibin) = 1 + mean(var_lambda{ibin}, 2, 'omitnan') .* (kappa{ibin} - 1);
+    fano_CMP(:, ibin) = mean(var_lambda{ibin} ./ mean_lambda{ibin}, 2, 'omitnan');
 end
 
 %% Plot
@@ -144,14 +144,14 @@ figure(2)
 tiledlayout(3, 2);
 
 % plot of the mean
-min_mean = min([cell2mat(mean_counts_bin), cell2mat(mean_GP)], [], 'all');
-max_mean = max([cell2mat(mean_counts_bin), cell2mat(mean_GP)], [], 'all');
+min_mean = min([cell2mat(mean_counts_bin), cell2mat(mean_lambda)], [], 'all');
+max_mean = max([cell2mat(mean_counts_bin), cell2mat(mean_lambda)], [], 'all');
 
 nexttile
 for ibin = 1:length(mean_counts_bin)
     plot(linspace(0, max_mean, numel(mean_counts_bin{ibin}(im, :))), linspace(0, max_mean, numel(mean_counts_bin{ibin}(im, :))), 'k') 
     hold on;
-    scatter(mean_counts_bin{ibin}(im, :), mean_GP{ibin}(im, :))
+    scatter(mean_counts_bin{ibin}(im, :), mean_lambda{ibin}(im, :))
     xlabel('Empirical mean (spikes)')
     ylabel('Analytical mean (spikes)')
     axis square;
@@ -161,14 +161,14 @@ for ibin = 1:length(mean_counts_bin)
 end
 
 % plot of the variance
-min_var = min([cell2mat(var_counts_bin), cell2mat(var_GP)], [], 'all');
-max_var = max([cell2mat(var_counts_bin), cell2mat(var_GP)], [], 'all');
+min_var = min([cell2mat(var_counts_bin), cell2mat(var_lambda)], [], 'all');
+max_var = max([cell2mat(var_counts_bin), cell2mat(var_lambda)], [], 'all');
 
 nexttile
 for ibin = 1:length(mean_counts_bin)
     plot(linspace(0, max_var, numel(var_counts_bin{ibin}(im, :))), linspace(0, max_var, numel(var_counts_bin{ibin}(im, :))), 'k') 
     hold on;
-    scatter(var_counts_bin{ibin}(im, :), var_GP{ibin}(im, :))
+    scatter(var_counts_bin{ibin}(im, :), var_lambda{ibin}(im, :))
     xlabel('Empirical variance (spikes^{2})')
     ylabel('Analytical variance (spikes^{2})')
     axis square;

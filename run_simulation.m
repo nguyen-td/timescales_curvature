@@ -6,9 +6,9 @@ seed = 3;
 rng(seed)
 
 %% Define random processes
-n_frames = 11;           % number of video frames
-frame_duration = 0.2;    % duration over with a single frame was shown (seconds)
-n_trials = 1000;         % number of trials
+n_frames = 11;         % number of video frames
+frame_duration = 0.2;  % duration over with a single frame was shown (seconds)
+n_trials = 1;          % number of trials
 
 % create time series
 T = (n_frames * frame_duration);  % duration (seconds)
@@ -17,8 +17,8 @@ x = linspace(0, T, T / dt);       % dummy data points
 
 % parameters of fast population
 n_neurons = 10;    % number of neurons within the population
-rho_f = 2;         % variance of tuning curves
-tau_f = 0.2;       % time scale of tuning curves
+rho_f = 3;         % variance of tuning curves
+tau_f = 0.3;       % time scale of tuning curves
 
 % parameters of shared gain of fast population
 rho_g = 0.1;  % [min, max] variance of gain
@@ -26,12 +26,13 @@ tau_g = 0.2;  % time scale of gain (seconds)
 q_g = 2;      % power law exponent of gain covariance function
 
 %% Simulate neural responses
+% generate tuning curves, gains, and rate functions
 [tuning_curves, gain, lambda] = compute_CMP(n_trials, x, n_neurons, rho_f, tau_f, rho_g, tau_g, q_g);
 
 %% Plot curves
 
 % plot tuning curves, gain and average rate separately
-itrial = 14;
+itrial = 1;
 n_plots = 5; % number of neurons to plot side by side
 fig = figure;
 set(fig, 'Position', [0, 100, 1400, 700]); 
@@ -39,9 +40,9 @@ set(gca, 'FontSize', 13)
 
 for it = 1:n_plots
     subplot(3, n_plots, it) % plot tuning curves
-    plot(x, squeeze(tuning_curves(it, :, itrial)), 'Color', 'black', 'LineWidth', 1)
+    plot(x, squeeze(tuning_curves(it, :, itrial)), 'Color', 'black', 'LineWidth', 2)
     ylim([min(tuning_curves, [], 'all') max(tuning_curves, [], "all")])
-    ylabel('Firing rate (spikes/second)')
+    ylabel('f(s,t) (spikes/second)')
     xlabel('Time (s)')
     title(['Neuron ' num2str(it)])
 end
@@ -51,9 +52,9 @@ lgd_tuning.Box = 'off';
 
 for ig = 1:n_plots
     subplot(3, n_plots, ig + n_plots) % plot gains
-    plot(x, squeeze(gain(ig, :, itrial)), 'LineWidth', 1)
-    % ylim([min(gain, [], 'all') max(gain, [], "all")])
-    ylabel('Gain (spikes/second)')
+    plot(x, squeeze(gain(ig, :, itrial)), 'LineWidth', 2)
+    ylim([min(gain, [], 'all') max(gain, [], "all")])
+    ylabel('g(t) (spikes/second)')
     xlabel('Time (s)')
 end
 lgd_gain = legend('Gain', 'Location', 'northwest', 'IconColumnWidth', 10);
@@ -62,9 +63,9 @@ lgd_gain.Box = 'off';
 
 for il = 1:n_plots
     subplot(3, n_plots, il + 2*n_plots) % plot gains
-    plot(x, squeeze(lambda(il, :, itrial)), 'LineWidth', 1)
+    plot(x, squeeze(lambda(il, :, itrial)), 'LineWidth', 2)
     ylim([min(lambda, [], 'all') max(lambda, [], "all")])
-    ylabel('Modulated firing rate (spikes/second)')
+    ylabel('\lambda(t) (spikes/second)')
     xlabel('Time (s)')
 end
 lgd_lambda = legend('Modulated firing rate', 'Location', 'northwest', 'IconColumnWidth', 10);
@@ -79,11 +80,9 @@ sgtitle(['Trial ' num2str(itrial)])
 [tuning_curves, gain, lambda, K_g] = compute_CMP(n_trials, x, n_neurons, rho_f, tau_f, rho_g, tau_g, q_g);
 
 % compute mean and variances
-bin_size = frame_duration;
-[mean_lambda, var_lambda] = mean_var_CMP(tuning_curves, rho_g, dt, T, bin_size, tau_g, q_g);
-
-
-% compute embedding on trial averages
-y = 2 ./ var_GP .* asinh(mean_GP) .* sqrt(mean(lambda, 3))); % is an approximation, was derived for constant gain
-c = compute_trajectory_pixel(reshape(y, [1, size(y, 1), size(y, 2)]));
+bin_size = 0.01;
+[mean_lambda, var_lambda, mean_gain, var_gain] = mean_var_CMP(tuning_curves, rho_g, dt, T, bin_size, tau_g, q_g);
+ 
+% % compute curvature
+c = compute_curvature(var_gain, mean_lambda);
 disp(['Average curvature: ' num2str(mean(rad2deg(c))) ' degrees'])
