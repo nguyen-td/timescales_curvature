@@ -8,7 +8,7 @@ rng(seed)
 %% Define random processes
 n_frames = 11;         % number of video frames
 frame_duration = 0.2;  % duration over with a single frame was shown (seconds)
-n_trials = 1;          % number of trials
+n_trials = 1000;          % number of trials
 
 % create time series
 T = (n_frames * frame_duration);  % duration (seconds)
@@ -16,13 +16,13 @@ dt = 0.001;                       % simulation time steps (in s)
 x = linspace(0, T, T / dt);       % dummy data points
 
 % parameters of fast population
-n_neurons = 10;    % number of neurons within the population
+n_neurons = 20;    % number of neurons within the population
 rho_f = 3;         % variance of tuning curves
 tau_f = 0.3;       % time scale of tuning curves
 
 % parameters of shared gain of fast population
 rho_g = 0.1;  % [min, max] variance of gain
-tau_g = 0.2;  % time scale of gain (seconds)
+tau_g = 0.02; % time scale of gain (seconds)
 q_g = 2;      % power law exponent of gain covariance function
 
 %% Simulate neural responses
@@ -32,7 +32,7 @@ q_g = 2;      % power law exponent of gain covariance function
 %% Plot curves
 
 % plot tuning curves, gain and average rate separately
-itrial = 1;
+itrial = 11;
 n_plots = 5; % number of neurons to plot side by side
 fig = figure;
 set(fig, 'Position', [0, 100, 1400, 700]); 
@@ -80,9 +80,11 @@ sgtitle(['Trial ' num2str(itrial)])
 [tuning_curves, gain, lambda, K_g] = compute_CMP(n_trials, x, n_neurons, rho_f, tau_f, rho_g, tau_g, q_g);
 
 % compute mean and variances
-bin_size = 0.01;
+bin_size = 0.02;
 [mean_lambda, var_lambda, mean_gain, var_gain] = mean_var_CMP(tuning_curves, rho_g, dt, T, bin_size, tau_g, q_g);
  
 % % compute curvature
 c = compute_curvature(var_gain, mean_lambda);
 disp(['Average curvature: ' num2str(mean(rad2deg(c))) ' degrees'])
+
+save('data/lambda.mat', 'lambda')

@@ -19,6 +19,7 @@ G = repmat(gamrnd(r, s, [n_trials, 1]), 1, T / dt);
 spike_train = double(x <= rate * G * dt);
 % spike_train = double(x <= rate * dt);
 
+
 % compute means and variances across trials
 mean_trial = sum(spike_train, 2);
 var_trial = var(spike_train, 0, 2) * (T / dt);
