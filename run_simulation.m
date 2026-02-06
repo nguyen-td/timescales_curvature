@@ -8,7 +8,7 @@ rng(seed)
 %% Define random processes
 n_frames = 11;         % number of video frames
 frame_duration = 0.2;  % duration over with a single frame was shown (seconds)
-n_trials = 1000;          % number of trials
+n_trials = 100;          % number of trials
 
 % create time series
 T = (n_frames * frame_duration);  % duration (seconds)
