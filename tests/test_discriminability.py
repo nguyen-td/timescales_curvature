@@ -25,7 +25,8 @@ from perceptual_straightening.modules import ELBO
 
 # load sample neural responses
 data_path = Path('data')
-f_name = 'sim_0197.mat' # slow sensory-driven time scale
+# f_name = 'sim_0197.mat' # slow sensory-driven time scale
+f_name = 'sim_0000.mat' # slow sensory-driven time scale
 S = scipy.io.loadmat(Path(data_path) / f_name)['S']
 S_list = [S[0, i] for i in range(S.shape[1])]  # convert to list of structs
 
@@ -35,16 +36,21 @@ bin_sizes_all = mat2['bin_sizes_all'][0][12:-2] # only consider reasonable bin s
 save_path = Path('data') / 'results'
 save_path.mkdir(parents=True, exist_ok=True)
 
+n_neurons = [2, 4, 8, 10, 20, 40, 50, 100]
+
 # unpack data
-saved_curvatures = np.zeros((len(S_list), len(bin_sizes_all)))
-saved_discrim = np.zeros((len(S_list), len(bin_sizes_all)))
-for ineuron in range(len(S_list)): # loop over different population sizes (20, 50, 80, 100)
+saved_curvatures = np.zeros((len(n_neurons), len(bin_sizes_all)))
+saved_discrim = np.zeros((len(n_neurons), len(bin_sizes_all)))
+for ineuron, n_neuron in enumerate(n_neurons): 
     print(f'Runinng for population size index: {ineuron}')
     for ibin in range(len(bin_sizes_all)): # loop over different bin sizes
         print(f'Running for bin size index: {ibin}')
-        rate = S_list[ineuron]['lambda'][0, 0]
-        tuning_curves = S_list[ineuron]['tuning_curves'][0, 0]
-        gain = S_list[ineuron]['gain'][0, 0]
+        # rate = S_list[ineuron]['lambda'][0, 0]
+        # tuning_curves = S_list[ineuron]['tuning_curves'][0, 0]
+        # gain = S_list[ineuron]['gain'][0, 0]
+        rate = S_list[ineuron]['lambda']
+        tuning_curves = S_list[ineuron]['tuning_curves']
+        gain = S_list[ineuron]['gain']
 
         n_neurons = rate.shape[0]
         n_trials = rate.shape[2]
@@ -85,9 +91,14 @@ for ineuron in range(len(S_list)): # loop over different population sizes (20, 5
             class_j = clf.classes_[j]
             
             # restrict myself to only those data points that belong to the correct ground truth class
-            label_inds = np.where(y_pred == class_i | (y_pred == class_j))
-            discrim_mat[i, j] = discrim_mat[j, i] = clf.score(X_test[label_inds], y_test[label_inds])
-            count_mat[i, j] = count_mat[j, i] = len(y_test[label_inds])
+            label_inds = np.where(y_test == class_i | (y_test == class_j))
+            if label_inds[0].size == 0: # if no correct classification is found (list is empty)
+                continue
+            else:
+                discrim_mat[i, j] = discrim_mat[j, i] = clf.score(X_test[label_inds], y_test[label_inds])
+                count_mat[i, j] = count_mat[j, i] = len(y_test[label_inds])
+            # discrim_mat[i, j] = discrim_mat[j, i] = clf.score(X_test, y_test)
+            # count_mat[i, j] = count_mat[j, i] = len(y_test)
                 
         np.fill_diagonal(discrim_mat, 0.5)
 
@@ -103,10 +114,9 @@ for ineuron in range(len(S_list)): # loop over different population sizes (20, 5
             elbo = ELBO(n_dim, n_corr_obs, n_total_obs, n_starts=n_starts, n_iterations=n_iterations, verbose=True)
             c_est, p, elbo_loss_hist, kl_loss_hist, ll_loss_hist, c_prior_hist, d_prior_hist, l_prior_hist, c_post_hist, d_post_hist, l_post_hist = elbo.optimize_ELBO_SGD()
 
-
             # store results
             saved_curvatures[ineuron, ibin] = torch.rad2deg(torch.mean(c_est)).detach().numpy()
-            saved_discrim[ineuron, ibin] = np.mean(discrim_mat)
+            saved_discrim[ineuron, ibin] = np.nanmean(discrim_mat)
 
             # save 
             np.save(Path('data') / 'results' / f'{f_name.split('.')[0]}_curvs', saved_curvatures)
@@ -116,7 +126,7 @@ for ineuron in range(len(S_list)): # loop over different population sizes (20, 5
 
             # store results
             saved_curvatures[ineuron, ibin] = np.nan
-            saved_discrim[ineuron, ibin] = np.mean(discrim_mat)
+            saved_discrim[ineuron, ibin] = np.nanmean(discrim_mat)
 
             # save 
             np.save(Path('data') / 'results' / f'{f_name.split('.')[0]}_curvs', saved_curvatures)

@@ -14,8 +14,16 @@ lambda_mat = repmat(lambda.', 1, n_trials);
 % Poisson and square-root transformed Poisson variable
 poisson_rv = poissrnd(lambda_mat);
 
-figure(1); plot(mean(poisson_rv, 2), var(poisson_rv, 0, 2))
-figure(2); plot(mean(sqrt(poisson_rv), 2), var(sqrt(poisson_rv), 0, 2))
+mu_poisson_rv = mean(poisson_rv, 2);
+var_poisson_rv = var(poisson_rv, 0, 2);
+mu_poisson_rv_sqrt = mean(sqrt(poisson_rv));
+var_poisson_rv_sqrt = var(sqrt(poisson_rv));
+
+figure(1); 
+plot(mu_poisson_rv, var_poisson_rv)
+hold on;
+plot(mu_poisson_rv_sqrt, var_poisson_rv_sqrt)
+ylim([0 max(sqrt(poisson_rv), [], "all")])
 
 % Classic modulated Poisson
 figure(3);
