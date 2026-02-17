@@ -8,7 +8,7 @@ rng(seed)
 %% Define random processes
 n_frames = 11;         % number of video frames
 frame_duration = 0.2;  % duration over with a single frame was shown (seconds)
-n_trials = 100;          % number of trials
+n_trials = 1000;          % number of trials
 
 % create time series
 T = (n_frames * frame_duration);  % duration (seconds)
@@ -99,4 +99,5 @@ S.tau_g = tau_g;
 S.q_g = q_g;
 
 file_number = 0;
-save(fullfile('data', ['sim_' sprintf('%04d', file_number) '.mat']), 'S')
+% save(fullfile('data', ['sim_' sprintf('%04d', file_number) '.mat']), 'S')
+save(fullfile('data', ['sim_' sprintf('%04d', file_number) '_1k_trials.mat']), 'S', '-v7.3')
