@@ -25,7 +25,8 @@ from spike_generator import generate_spikes
 from perceptual_straightening.modules import ELBO
 
 # load sample neural responses
-data_path = Path('data')
+# data_path = Path('data')
+data_path = Path("C:/Users/tien/OneDrive - The University of Texas at Austin")
 f_name = 'sim_0000_1k_trials.mat'
 S = mat73.loadmat(Path(data_path) / f_name)
 
@@ -69,15 +70,15 @@ for ineuron, n_neuron in enumerate(n_neurons):
         discrim_mat = np.zeros((n_bins, n_bins))
         count_mat = np.zeros((n_bins, n_bins))
         for bin_comb in class_list:
-            ibin = bin_comb[0]
-            jbin = bin_comb[1]
+            jbin = bin_comb[0]
+            kbin = bin_comb[1]
 
             # create data consistent with sklearn convention
             X = mean_spike_train.transpose(1, 2, 0).reshape((-1, n_neuron)) # n_samples x n_features
             y = np.repeat(np.arange(n_bins), n_trials)
 
             # create training dataset with only two classes
-            mask = np.isin(y, [ibin, jbin])
+            mask = np.isin(y, [jbin, kbin])
             X_train, X_test, y_train, y_test = train_test_split(X[mask], y[mask], test_size=0.2, random_state=42)
 
             scaler = StandardScaler()
@@ -89,8 +90,8 @@ for ineuron, n_neuron in enumerate(n_neurons):
             clf.fit(X_train, y_train)
 
             # store discriminability values
-            discrim_mat[ibin, jbin] = discrim_mat[jbin, ibin] = np.sum(clf.predict(X_test) == y_test) / len(y_test)
-            count_mat[ibin, jbin] = count_mat[jbin, ibin] = len(y_test)
+            discrim_mat[jbin, kbin] = discrim_mat[kbin, jbin] = np.sum(clf.predict(X_test) == y_test) / len(y_test)
+            count_mat[jbin, kbin] = count_mat[kbin, jbin] = len(y_test)
                 
         np.fill_diagonal(discrim_mat, np.nan)
 
