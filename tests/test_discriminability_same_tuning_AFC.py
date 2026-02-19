@@ -39,7 +39,7 @@ save_path.mkdir(parents=True, exist_ok=True)
 n_neurons = [2, 4, 8, 10, 20, 40, 50, 100]
 neuron_idx = 29
 
-iscurvature = False # if true, compute curvature, else no
+iscurvature = True # if true, compute curvature, else no
 
 # unpack data
 saved_curvatures = np.zeros((len(n_neurons), len(bin_sizes_all)))
