@@ -50,7 +50,7 @@ for ineuron, n_neuron in enumerate(n_neurons):
 
         tuning_curves = S['S']['tuning_curves']
         gain = S['S']['gain']
-        rate = S['S']['gain']
+        rate = S['S']['lambda']
 
         n_trials = rate.shape[2]
         dt = S['S']['dt']
