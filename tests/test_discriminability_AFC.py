@@ -92,7 +92,7 @@ for ineuron, n_neuron in enumerate(n_neurons):
             discrim_mat[jbin, kbin] = discrim_mat[kbin, jbin] = np.sum(clf.predict(X_test) == y_test) / len(y_test)
             count_mat[jbin, kbin] = count_mat[kbin, jbin] = len(y_test)
                 
-        np.fill_diagonal(discrim_mat, np.nan)
+        np.fill_diagonal(discrim_mat, 0.5)
 
         if iscurvature:
             try:
