@@ -58,8 +58,10 @@ for itau = 1:numel(tau_f)
         % [mean_lambda_slow_gain, ~, ~, var_gain_slow_gain] = mean_var_CMP(tuning_curves_slow_gain, rho_g, dt, T, bin_sizes_all(ibin), tau_g, q_g(2));
 
         % compute global curvature (in degrees)
-        c_fast_gain(ibin, itau) = rad2deg(mean(compute_curvature(var_gain_fast_gain, mean_lambda_fast_gain)));
-        c_slow_gain(ibin, itau) = rad2deg(mean(compute_curvature(var_gain_slow_gain, mean_lambda_slow_gain)));
+        y_fast_gain = compute_VST(var_gain_fast_gain, mean_lambda_fast_gain);
+        y_slow_gain = compute_VST(var_gain_slow_gain, mean_lambda_slow_gain);
+        c_fast_gain(ibin, itau) = rad2deg(mean(compute_curvature(y_fast_gain)));
+        c_slow_gain(ibin, itau) = rad2deg(mean(compute_curvature(y_slow_gain)));
     end
 end
 

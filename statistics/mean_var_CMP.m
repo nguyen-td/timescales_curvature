@@ -11,13 +11,17 @@
 %   q             - [double] (0 < q <= 2) Exponent
 %
 % Outputs:
-%   mean_lambda   - (n_neurons x n_bins) Mean spike count per time bin
-%   var_lambda    - (n_neurons x n_bins) Variance per time bin
-%   mean_gain     - [double] Mean of gain
-%   var_gain      - (1 x n_bins) Variance of gain per time bin
+%   mean_spike_count - (n_neurons x n_bins x n_trials) Mean spike count per time bin
+%   var_spike_count       - (n_neurons x n_bins x n_trials) Variance per time bin
+%   mean_gain        - [double] Mean of gain
+%   var_gain         - (1 x n_bins) Variance of gain per time bin
 
-function [mean_lambda, var_lambda, mean_gain, var_gain] = mean_var_CMP(tuning_curves, rho_g, dt, T, bin_size, tau_g, q_g)
+function [mean_spike_count, var_spike_count, mean_gain, var_gain] = mean_var_CMP(tuning_curves, rho_g, dt, T, bin_size, tau_g, q_g)
     
+    if nargin < 8
+        n_trials = 1;
+    end
+
     % tuning curves are equal across trials
     tuning_curves = squeeze(tuning_curves(:, :, 1)); 
 
@@ -25,12 +29,13 @@ function [mean_lambda, var_lambda, mean_gain, var_gain] = mean_var_CMP(tuning_cu
     bin_factor = bin_size / dt;
     tuning_curves_reshaped = reshape(tuning_curves, size(tuning_curves, 1), bin_factor, []);  % (n_neurons x bin_factor x n_bins)
     
-    % compute mean of lambda
-    mean_lambda = squeeze(exp(rho_g/2) .* sum(tuning_curves_reshaped, 2)) * dt;
+    % compute mean of spike count (Methods under Partitioning variability with CMP)
+    mean_spike_count = squeeze(exp(rho_g/2) .* sum(tuning_curves_reshaped, 2)) * dt;
     
     % get variance of lambda and gain
     [integral_lambda, var_gain] = compute_integrals(tuning_curves, tuning_curves_reshaped, bin_factor, T, tau_g, rho_g, q_g, dt, bin_size); 
-    var_lambda = mean_lambda + integral_lambda;
+    var_gain = squeeze(var_gain);
+    var_spike_count = squeeze(mean_spike_count .* ones(size(mean_spike_count, 1), size(mean_spike_count, 2), n_trials) + integral_lambda);
 
     % compute mean of gain
     mean_gain = exp(1/2 * rho_g); % K_g is a stationary kernel that only depends on time lag (t1-t2) so doesn't depend on bin size; if time lag = 0, covariance collapses to rho_g
@@ -55,14 +60,15 @@ function [gamma, var_gain] = compute_integrals(tuning_curves, tuning_curves_resh
 
         K_g = exp(epl_kernel(T1, T2, rho_g, tau_g, q_g));
 
-        % compute gamma for variance of lambda
+        % compute gamma for variance of lambda (gamma is the second summand in the variance equation)
         tuning_squared = reshape(tuning_curves_reshaped(:, :, ibin), [n_neurons, bin_size, 1]) .* reshape(tuning_curves_reshaped(:, :, ibin), [n_neurons, 1, bin_size]);
         gamma(:, ibin) = exp(rho_g) * dt^2 * sum(tuning_squared .* (permute(repmat(K_g, 1, 1, n_neurons), [3, 2, 1]) - 1), [2, 3]); 
         
         % % compute mean of gain
-        % mean_gain(ibin) = sum(exp(1/2 * rho_g));
+        % mean_gain(ibin, itrial) = sum(exp(1/2 * rho_g));
 
         % compute variance of gain
-        var_gain(ibin) = exp(rho_g) * (dt^2 / dt_bin^2) * (sum(K_g - 1, 'all'));
+        % var_gain(:, ibin) = exp(rho_g) * (dt^2 / dt_bin^2) * (sum(K_g - 1, 'all'));
+        var_gain(:, ibin) = ((dt^2 / dt_bin^2) * sum(K_g, 'all')) - 1;
     end
 end
