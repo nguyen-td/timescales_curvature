@@ -42,18 +42,23 @@ for bin = 0:dt:T
 end
 
 %% Generate spike trains 
-bin_size_idx = 12;
+bin_size_idx = 20;
 spike_probs = unifrnd(0, 1, size(lambda));
 spikes = double(spike_probs <= lambda * dt);
 bin_factor = bin_sizes_all(bin_size_idx) / dt;
 
 % downsampling
 spikes_reshaped = reshape(spikes, size(spikes, 1), bin_factor, [], n_trials);  % n_neurons x bin_size x n_bins x n_trials
-binned_spikes = sum(spikes_reshaped, 2); % n_neurons x 1 x n_bins x n_trials
+binned_spikes = sum(spikes_reshaped, 2); % n_neurons x 1 x n_bins x n_trials (spike counts per bin)
 
 % compute mean and variance
-mean_spikes = squeeze(mean(binned_spikes, 4));  % mean spikes per bin across trials
+mean_spikes = squeeze(mean(binned_spikes, 4));  % mean spike count per bin across trials
 var_spikes = squeeze(var(binned_spikes, 0, 4)); % variance per bin across trials
+
+% normalized spike counts (variance = 1)
+norm_spikes = squeeze(binned_spikes) ./ sqrt(var_spikes);
+mean_norm_spikes = mean(norm_spikes, 3);
+var_norm_spikes = var(norm_spikes, 0, 3);
 
 %% Plot spike trains
 n_plots = 10; % number of neurons to plot side by side
@@ -86,15 +91,16 @@ figure(2)
 scatter(mean_spikes, var_spikes)
 hold on;
 plot([0, max_value], [0, max_value], 'k--')
-xlabel('Mean (spikes)')
+xlabel('Mean spike count (spikes)')
 ylabel('Variance (spikes^{2})')
 title(['Bin size: ' num2str(bin_sizes_all(bin_size_idx))])
 axis square;
 set(gca,'FontSize', 12)
 
 %% Apply variance-stabilizing transformation
-spikes_transformed = sqrt(squeeze(binned_spikes));
-var_spikes_transformed = var(spikes_transformed, 0, 3);
+% spikes_transformed = sqrt(squeeze(binned_spikes));
+spikes_transformed = (2 ./ var_spikes) .* asinh(var_spikes .* sqrt(mean_spikes));
+var_spikes_transformed = var(spikes_transformed, 0, 2);
 
 %% Plot mean-variance relationship of the transformed spikes
 max_value_transformed = max([mean_spikes, var_spikes], [], 'all');
@@ -102,7 +108,7 @@ max_value_transformed = max([mean_spikes, var_spikes], [], 'all');
 figure(3)
 scatter(mean_spikes, var_spikes_transformed)
 hold on;
-plot([0, max_value_transformed], [0, max_value_transformed], 'k--')
+% plot([0, max_value_transformed], [0, max_value_transformed], 'k--')
 xlabel('Mean (spikes)')
 ylabel('Variance (spikes^{2})')
 title(['Bin size: ' num2str(bin_sizes_all(bin_size_idx))])

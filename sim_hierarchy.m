@@ -9,7 +9,8 @@ rng(seed)
 
 n_frames = 11;        % number of video frames
 frame_duration = 0.2; % duration over with a single frame was shown (seconds)
-n_trials = 1;         % number of trials
+n_trials = 1000;      % number of trials
+is_analytical = false; % estimate curvature based on analytical solutions or simulated spike counts
 
 % create time series
 T = (n_frames * frame_duration);  % duration (seconds)
@@ -52,16 +53,51 @@ for itau = 1:numel(tau_f)
 
     % loop over different bin sizes
     for ibin = 1:numel(bin_sizes_all)
-        [mean_lambda_fast_gain, ~, ~, var_gain_fast_gain] = mean_var_CMP(tuning_curves_fast_gain, rho_g, dt, T, bin_sizes_all(ibin), tau_g(1), q_g);
-        [mean_lambda_slow_gain, ~, ~, var_gain_slow_gain] = mean_var_CMP(tuning_curves_slow_gain, rho_g, dt, T, bin_sizes_all(ibin), tau_g(2), q_g);
-        % [mean_lambda_fast_gain, ~, ~, var_gain_fast_gain] = mean_var_CMP(tuning_curves_fast_gain, rho_g, dt, T, bin_sizes_all(ibin), tau_g, q_g(1));
-        % [mean_lambda_slow_gain, ~, ~, var_gain_slow_gain] = mean_var_CMP(tuning_curves_slow_gain, rho_g, dt, T, bin_sizes_all(ibin), tau_g, q_g(2));
+        if is_analytical
+            [mean_lambda_fast_gain, ~, ~, var_gain_fast_gain] = mean_var_CMP(tuning_curves_fast_gain, rho_g, dt, T, bin_sizes_all(ibin), tau_g(1), q_g);
+            [mean_lambda_slow_gain, ~, ~, var_gain_slow_gain] = mean_var_CMP(tuning_curves_slow_gain, rho_g, dt, T, bin_sizes_all(ibin), tau_g(2), q_g);
+            % [mean_lambda_fast_gain, ~, ~, var_gain_fast_gain] = mean_var_CMP(tuning_curves_fast_gain, rho_g, dt, T, bin_sizes_all(ibin), tau_g, q_g(1));
+            % [mean_lambda_slow_gain, ~, ~, var_gain_slow_gain] = mean_var_CMP(tuning_curves_slow_gain, rho_g, dt, T, bin_sizes_all(ibin), tau_g, q_g(2));
+    
+            % compute global curvature (in degrees)
+            y_fast_gain = compute_VST(var_gain_fast_gain, mean_lambda_fast_gain);
+            y_slow_gain = compute_VST(var_gain_slow_gain, mean_lambda_slow_gain);
+            c_fast_gain(ibin, itau) = rad2deg(mean(compute_curvature(y_fast_gain)));
+            c_slow_gain(ibin, itau) = rad2deg(mean(compute_curvature(y_slow_gain)));
+        else
+            % generate spikes
+            spike_probs_fast_gain = unifrnd(0, 1, size(lambda_fast_gain));
+            spikes_fast_gain = double(spike_probs_fast_gain <= lambda_fast_gain * dt);
+            bin_factor_fast_gain = bin_sizes_all(ibin) / dt;
 
-        % compute global curvature (in degrees)
-        y_fast_gain = compute_VST(var_gain_fast_gain, mean_lambda_fast_gain);
-        y_slow_gain = compute_VST(var_gain_slow_gain, mean_lambda_slow_gain);
-        c_fast_gain(ibin, itau) = rad2deg(mean(compute_curvature(y_fast_gain)));
-        c_slow_gain(ibin, itau) = rad2deg(mean(compute_curvature(y_slow_gain)));
+            spike_probs_slow_gain = unifrnd(0, 1, size(lambda_slow_gain));
+            spikes_slow_gain = double(spike_probs_slow_gain <= lambda_slow_gain * dt);
+            bin_factor_slow_gain = bin_sizes_all(ibin) / dt;
+            
+            % downsampling
+            spikes_reshaped_fast_gain = reshape(spikes_fast_gain, size(spikes_fast_gain, 1), bin_factor_fast_gain, [], n_trials);  % n_neurons x bin_size x n_bins x n_trials
+            binned_spikes_fast_gain = sum(spikes_reshaped_fast_gain, 2); % n_neurons x 1 x n_bins x n_trials (spike counts per bin)
+            
+            spikes_reshaped_slow_gain = reshape(spikes_slow_gain, size(spikes_slow_gain, 1), bin_factor_slow_gain, [], n_trials);  % n_neurons x bin_size x n_bins x n_trials
+            binned_spikes_slow_gain = sum(spikes_reshaped_slow_gain, 2); % n_neurons x 1 x n_bins x n_trials (spike counts per bin)
+
+            % compute spike count variance
+            var_spikes_fast_gain = squeeze(var(binned_spikes_fast_gain, 0, 4)); % variance per bin across trials
+            var_spikes_slow_gain = squeeze(var(binned_spikes_slow_gain, 0, 4)); % variance per bin across trials
+            
+            % normalized spike counts (variance = 1)
+            norm_spikes_fast_gain = squeeze(binned_spikes_fast_gain) ./ sqrt(var_spikes_fast_gain);
+            mean_norm_spikes_fast_gain = mean(norm_spikes_fast_gain, 3);
+            % var_norm_spikes_fast_gain = var(norm_spikes_fast_gain, 0, 3);
+
+            norm_spikes_slow_gain = squeeze(binned_spikes_slow_gain) ./ sqrt(var_spikes_slow_gain);
+            mean_norm_spikes_slow_gain = mean(norm_spikes_slow_gain, 3);
+            % var_norm_spikes_slow_gain = var(norm_spikes_slow_gain, 0, 3);
+
+            % compute curvature
+            c_fast_gain(ibin, itau) = rad2deg(mean(compute_curvature(mean_norm_spikes_fast_gain)));
+            c_slow_gain(ibin, itau) = rad2deg(mean(compute_curvature(mean_norm_spikes_slow_gain)));
+        end
     end
 end
 

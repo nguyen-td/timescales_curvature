@@ -88,9 +88,11 @@ end
 
 %% Plot mean-variance relationship of the transformed firing rate
 max_value = max([mean_spike_count{bin_size_idx}, var_y_spikes], [], 'all');
+% max_value = max([mean_y_spikes, var_y_spikes], [], 'all');
 
 figure(2)
 scatter(mean_spike_count{bin_size_idx}, var_y_spikes)
+% scatter(mean_y_spikes, var_y_spikes)
 hold on;
 plot([0, max_value], [0, max_value], 'k--')
 xlabel('Mean (spikes)')

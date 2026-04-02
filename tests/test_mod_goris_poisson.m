@@ -5,27 +5,38 @@ clear all
 clc
 
 %% Parameters
-T = 5;            % duration (seconds)
+T = 2;            % duration (seconds)
 dt = 1 / 1000;    % time bin (seconds)
-rate = 40;        % mean rate (spikes/s)
+% rate = 70;        % mean rate (spikes/s)
+rate = linspace(1, 100, T / dt);
 var_gain = 0.1;   % variance of the gain
-n_trials = 100;   % number of trials
+n_trials = 1000;   % number of trials
+bin_size = 0.1;   % time bin in seconds
+gain_distribution = 'gamma'; % either 'gamma' or 'lognormal'
 
 % generate modulated Poisson process
-x = unifrnd(0, 1, [n_trials, T / dt]);
-r = 1 / var_gain;
-s = var_gain;
-G = repmat(gamrnd(r, s, [n_trials, 1]), 1, T / dt);
-spike_train = double(x <= rate * G * dt);
-% spike_train = double(x <= rate * dt);
+if strcmpi(gain_distribution, 'lognormal')
+    Sigma_G = diag(var_gain);
+    mu_G = -1/2 * diag(Sigma_G);
+    G = repmat(exp(normrnd(mu_G, Sigma_G, [n_trials, 1])), 1, T / dt);
+else
+    r = 1 / var_gain;
+    s = var_gain;
+    G = repmat(gamrnd(r, s, [n_trials, 1]), 1, T / dt);
+end
 
+x = unifrnd(0, 1, [n_trials, T / dt]);
+% lambda = rate;
+lambda = rate .* G;
+% lambda = 2 / (exp(diag(Sigma_G)) - 1) * asinh((exp(diag(Sigma_G)) - 1) * sqrt(rate .* G));
+spike_train = double(x <= lambda * dt);
 
 % compute means and variances across trials
-mean_trial = sum(spike_train, 2);
-var_trial = var(spike_train, 0, 2) * (T / dt);
+[mean_spike_count, var_spike_count] = get_mean_var(spike_train, 100);
+max_value = max([mean_spike_count, var_spike_count], [], 'all');
 
-% plots    
-subplot(1, 3, 1)
+%% Plotting   
+subplot(1, 2, 1)
 imagesc(spike_train); 
 colormap('gray');
 colorbar;
@@ -34,25 +45,31 @@ xlabel('Time (ms)')
 ylabel('Trial number')
 set(gca,'YDir','normal')
 
-subplot(1, 3, 2)
-histogram(mean_trial, 'Normalization', 'percentage')
-xlabel('Mean firing rate (spikes/s)')
-ylabel('Probability (%)')
-axis square; 
-
-subplot(1, 3, 3)
-scatter(mean_trial, var_trial)
-xlabel('Mean (spikes/s')
-ylabel('Variance (spikes/s)^2')
+subplot(1, 2, 2)
+plot([0, max_value], [0, max_value], 'k--')
+hold on;
+scatter(mean_spike_count, var_spike_count)
+xlabel('Mean spike count')
+ylabel('Variance of spike count')
 set(gca,'YDir','normal', 'XScale', 'log', 'YScale', 'log')
-xlim([min([mean_trial, var_trial], [], 'all') max([mean_trial, var_trial], [], 'all')])
-ylim([min([mean_trial, var_trial], [], 'all') max([mean_trial, var_trial], [], 'all')])
+% xlim([min([mean_spike_count, var_spike_count], [], 'all') max([mean_spike_count, var_spike_count], [], 'all')])
+% ylim([min([mean_spike_count, var_spike_count], [], 'all') max([mean_spike_count, var_spike_count], [], 'all')])
 axis square; 
+grid on
 
-%% Compute across-trial autocorrelation
-across_trial_spikes = sum(spike_train, 1); % accross trial spike count
-mean_spike_count = mean(spike_train, 1);
-var_spike_count = var(spike_train, 0, 1);
-
-R = xcorr(across_trial_spikes - mean_spike_count);
-figure; plot(R)
+function [mean_win, var_win] = get_mean_var(spike_train, n_windows)
+    mean_win = zeros(n_windows, 1);
+    var_win = zeros(n_windows, 1);
+    for iwin = 1:n_windows
+        issucess = false;
+        while ~issucess
+            start_win = randi(size(spike_train, 2));
+            size_win = randi(size(spike_train, 2));
+            if (start_win + size_win) <= size(spike_train, 2) % if the window has a plausible size (does not exceed the time axis)
+                issucess = true;
+            end
+        end
+        mean_win(iwin) = mean(sum(spike_train(:, start_win:start_win+size_win), 2));
+        var_win(iwin) = var(sum(spike_train(:, start_win:start_win+size_win), 2));
+    end
+end
