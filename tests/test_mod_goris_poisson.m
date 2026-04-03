@@ -12,7 +12,7 @@ rate = linspace(1, 100, T / dt);
 var_gain = 0.1;   % variance of the gain
 n_trials = 1000;   % number of trials
 bin_size = 0.1;   % time bin in seconds
-gain_distribution = 'gamma'; % either 'gamma' or 'lognormal'
+gain_distribution = 'lognormal'; % either 'gamma' or 'lognormal'
 
 % generate modulated Poisson process
 if strcmpi(gain_distribution, 'lognormal')
@@ -27,8 +27,8 @@ end
 
 x = unifrnd(0, 1, [n_trials, T / dt]);
 % lambda = rate;
-lambda = rate .* G;
-% lambda = 2 / (exp(diag(Sigma_G)) - 1) * asinh((exp(diag(Sigma_G)) - 1) * sqrt(rate .* G));
+% lambda = rate .* G;
+lambda = 2 / (exp(diag(Sigma_G)) - 1) * asinh((exp(diag(Sigma_G)) - 1) * sqrt(rate .* G));
 spike_train = double(x <= lambda * dt);
 
 % compute means and variances across trials
