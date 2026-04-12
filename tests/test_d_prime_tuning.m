@@ -10,106 +10,102 @@ clc
 T = 2;                      % duration (seconds)
 dt = 1 / 1000;              % time bin (seconds)
 max_freq = 100;             % maximum firing rate
-sigma = [0.1, 1, 10];       % variance
-time_bins = [0.01, 0.02, 0.05]; % time bins in seconds
+time_bins = [0.01, 0.02, 0.05, 0.1]; % time bins in seconds
+sigma_G = [0.1, 1, 10]; 
+min_rate = 20;
+max_rate = 100; % 0-100 spk/s over T seconds
 
-% compute d_prime based on all possible noise combinations
-all_sigma_combs = table2array(combinations(sigma, sigma)); 
-rate = linspace(1, max_freq, T / dt);
-d_primes_orig = compute_d_prime(T, time_bins, all_sigma_combs, rate);
-d_primes_Olivier = compute_d_prime(T, time_bins, all_sigma_combs, rate, 'Olivier');
-
-%% Plotting
 figure(1)
-plot(rate, 'LineWidth', 1.4)
-title('Simulated firing rate')
-xlabel('Time (ms)')
-ylabel('Firing rate (spikes/s)')
-set(gca,'FontSize', 12)
-axis square
-grid on
-
-% original firing rates
-figure(2)
-max_y_lim = max(cell2mat(d_primes_orig), [], 'all');
-tile = tiledlayout(1, numel(time_bins));
+colors = lines(numel(sigma_G)); % distinct colors for each sigma
+t = tiledlayout(4, 3, 'TileSpacing', 'loose', 'Padding', 'compact');
 for ibin = 1:numel(time_bins)
+    time_bin_vec = linspace(0, T, T / time_bins(ibin));
+    linear_rate = linspace(min_rate, max_rate, T / time_bins(ibin));
 
-    nexttile
-    hold on
-    for icomb = 1:size(all_sigma_combs, 1)
-        plot(d_primes_orig{ibin}(icomb, :), 'LineWidth', 1.4, ...
-            'DisplayName', ['\sigma^{2}_{1} = ' num2str(all_sigma_combs(icomb, 1)) '; \sigma^{2}_{2} = ' num2str(all_sigma_combs(icomb, 2))])
-    end
-    title(['d-prime for \Deltat = ' num2str(time_bins(ibin))])
-    xlabel('Time bin (s)')
-    ylabel('d-prime')
-    ylim([0 max_y_lim])
-    axis square
-    grid on
-    set(gca,'FontSize', 12)
-    hold off
-    if ibin == numel(time_bins)
-        legend('Location', 'bestoutside')
-    end
-end
-
-% Olivier's transformation
-figure(3)
-max_y_lim = max(cell2mat(d_primes_Olivier), [], 'all');
-tile = tiledlayout(1, numel(time_bins));
-for ibin = 1:numel(time_bins)
-
-    nexttile
-    hold on
-    for icomb = 1:size(all_sigma_combs, 1)
-        plot(d_primes_Olivier{ibin}(icomb, :), 'LineWidth', 1.4, ...
-            'DisplayName', ['\sigma^{2}_{1} = ' num2str(all_sigma_combs(icomb, 1)) '; \sigma^{2}_{2} = ' num2str(all_sigma_combs(icomb, 2))])
-    end
-    title(['d-prime for \Deltat = ' num2str(time_bins(ibin))])
-    xlabel('Time bin (s)')
-    ylabel('d-prime')
-    ylim([0 max_y_lim])
-    axis square
-    grid on
-    set(gca,'FontSize', 12)
-    hold off
-    if ibin == numel(time_bins)
-        legend('Location', 'bestoutside')
-    end
-end
-
-
-function d_primes = compute_d_prime(T, time_bins, all_sigma_combs, rate, transform)
-    % Input:
-    % ------
-    %   transform - [String] If Olivier's transformation should be used: 'Olivier'. If empty, no transformation on the rate will be used.
+    d_prime = zeros(numel(sigma_G), numel(linear_rate));
+    snr_transformed = zeros(numel(sigma_G), numel(linear_rate));
     
-    if nargin < 5
-        transform = 'none';
+    % plot sdt_estimate and snr_transformed (estimates of d-prime)
+    nexttile
+    hold on, box off, axis square, grid on
+    h = gobjects(numel(sigma_G),1); % store SDT handles
+    for iSigma = 1:numel(sigma_G)
+
+        % compute d_prime
+        % mean_count = time_bin_vec .* rate .* time_bins(ibin);
+        mean_count = linear_rate .* time_bins(ibin);
+        var_count = mean_count + sigma_G(iSigma)^2 .* mean_count.^2;
+        dt_bin = diff(time_bin_vec);
+        [gamma, var_gain] = compute_integrals_d_prime(linear_rate, time_bin_vec, 0.2, 0.1, 2, dt, dt_bin(1), T);
+        d_prime(iSigma, :) = (mean_count - mean_count(1)) ./ sqrt((var_count + var_count(1)) / 2);
+
+        % compute transformed SNR
+        % transformed_rate = 2 / sigma_G(iSigma) * asinh(sigma_G(iSigma) * sqrt(time_bin_vec .* rate .* time_bins(ibin)));
+        transformed_rate = 2 / sigma_G(iSigma) * asinh(sigma_G(iSigma) * sqrt(linear_rate * time_bins(ibin)));
+        snr_transformed(iSigma, :) = transformed_rate - transformed_rate(1);
+
+        % plotting per sigma
+        h(iSigma) = plot(time_bin_vec, d_prime(iSigma, :), 'Color', colors(iSigma, :), 'LineWidth', 1.4); % store ONLY this
+
+        plot(time_bin_vec, snr_transformed(iSigma, :), '--', 'Color', colors(iSigma,:), 'LineWidth', 1.4)
     end
-    d_primes = {}; % n_time_bins x n_sigma_combs
-    for ibin = 1:numel(time_bins)
-        n_bins = T / time_bins(ibin);
+    legend(h, arrayfun(@(s) sprintf('\\sigma_G = %.2f', s), sigma_G, 'UniformOutput', false), 'Location', 'westoutside')
+    title(['\Deltat = ' num2str(time_bins(ibin))])
+    xlabel('Time (s)')
+    ylabel("d'")
+    
+    % plot sdt_estimate / snr_transformed
+    nexttile
+    hold on, box off, axis square, grid on
+    for iSigma = 1:numel(sigma_G)
+        plot(time_bin_vec, d_prime(iSigma, :) ./ snr_transformed(iSigma, :), 'Color', colors(iSigma,:), 'LineWidth', 1.4)
+    end
+    title('SDT estimate / SNR transformed', 'Units', 'normalized', 'Position', [0.5 1.03 0])
+    xlabel('Time (s)')
+    axis([0 2 0 2])
+
+    % plot sdt_estimate - snr_transformed
+    nexttile
+    hold on, box off, axis square, grid on
+    for iSigma = 1:numel(sigma_G)
+        plot(time_bin_vec, d_prime(iSigma, :) - snr_transformed(iSigma, :), 'Color', colors(iSigma,:), 'LineWidth', 1.4)
+    end
+    title('SDT estimate - SNR transformed', 'Units', 'normalized', 'Position', [0.5 1.03 0])
+    xlabel('Time (s)')
+    axis([0 T -2 2])
+end
+sgtitle('Solid = SDT (d''), Dashed = SNR (transformed)')
+
+figure(2)
+plot(time_bin_vec, linear_rate, 'LineWidth', 1.4)
+title(['Simulated linear firing rate from ' num2str(min_rate) ' - ' num2str(max_rate) ' spikes/s'], 'FontSize', 15)
+xlabel('Time (s)')
+ylabel('Firing rate (spikes/s)')
+axis square, grid on, box off
+
+function [gamma, var_gain] = compute_integrals_d_prime(linear_rate, time_bin_vec, tau_g, rho_g, q_g, dt, dt_bin, T)
+
+    rng(42)
+
+    gamma = zeros(1, numel(time_bin_vec));
+    var_gain = zeros(1, numel(time_bin_vec));
+    time_points_per_bin = (T / dt) / numel(time_bin_vec); 
+    for ibin = 1:size(gamma, 2)
+
+        % generate grid points
+        [T1, T2] = meshgrid(time_bin_vec(ibin), time_bin_vec(ibin));
+
+        K_g = exp(epl_kernel(T1, T2, rho_g, tau_g, q_g));
+
+        % compute gamma for variance of lambda (gamma is the second summand in the variance equation)
+        tuning_squared = linear_rate(:, ibin).* linear_rate(:, ibin);
+        gamma(:, ibin) = exp(rho_g) * dt^2 * sum(tuning_squared .* (permute(repmat(K_g, 1, 1, n_neurons), [3, 2, 1]) - 1), [2, 3]); 
         
-        d_primes_diff = zeros(size(all_sigma_combs, 1), n_bins-1);
-        for icomb = 1:size(all_sigma_combs, 1)
-            sigma1 = all_sigma_combs(icomb, 1);
-            sigma2 = all_sigma_combs(icomb, 2);
-            
-            binned_rates{ibin} = reshape(rate, [], n_bins);      % discretize rate (not really "bin" because we are dealing with analytical rate)
-            if strcmpi(transform, 'Olivier')
-                for idiff = 1:n_bins - 1
-                    mus = binned_rates{ibin}(1, :);
-                    y1 = 2 / sigma1 * asinh(sigma1 * sqrt(mus(idiff)));
-                    y2 = 2 / sigma2 * asinh(sigma2 * sqrt(mus(idiff+1)));
-                    d_primes_diff(icomb, idiff) = abs(y2 - y1) / sqrt((sigma1 + sigma2) / 2); 
-                end
-            else
-                diff_mus = diff(binned_rates{ibin}(1, :));           % compute difference of means at the start of each bin, since bins are fixed all diff_mus are equal
-                d_primes_diff(icomb, :) = diff_mus / sqrt((sigma1 + sigma2) / 2); 
-            end
-        end
-        d_primes{ibin} = d_primes_diff;
+        % % compute mean of gain
+        % mean_gain(ibin, itrial) = sum(exp(1/2 * rho_g));
+
+        % compute variance of gain
+        % var_gain(:, ibin) = exp(rho_g) * (dt^2 / dt_bin^2) * (sum(K_g - 1, 'all'));
+        var_gain(:, ibin) = ((dt^2 / dt_bin^2) * sum(K_g, 'all')) - 1;
     end
 end

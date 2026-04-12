@@ -9,8 +9,8 @@ rng(seed)
 
 n_frames = 11;        % number of video frames
 frame_duration = 0.2; % duration over with a single frame was shown (seconds)
-n_trials = 1000;      % number of trials
-is_analytical = false; % estimate curvature based on analytical solutions or simulated spike counts
+n_trials = 100;      % number of trials
+is_analytical = true; % estimate curvature based on analytical solutions or simulated spike counts
 
 % create time series
 T = (n_frames * frame_duration);  % duration (seconds)
