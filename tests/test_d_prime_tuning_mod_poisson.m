@@ -1,4 +1,4 @@
-% Test discriminability from linear tuning curve.
+% Test discriminability from linear tuning curve for modulated Poisson process.
 
 %% Setup
 clear
@@ -22,6 +22,7 @@ for ibin = 1:numel(time_bins)
     time_bin_vec = linspace(0, T, T / time_bins(ibin));
     linear_rate = linspace(min_rate, max_rate, T / time_bins(ibin));
 
+    % initialize d_prime and snr_transformed arrays
     d_prime = zeros(numel(sigma_G), numel(linear_rate));
     snr_transformed = zeros(numel(sigma_G), numel(linear_rate));
     
@@ -35,8 +36,6 @@ for ibin = 1:numel(time_bins)
         % mean_count = time_bin_vec .* rate .* time_bins(ibin);
         mean_count = linear_rate .* time_bins(ibin);
         var_count = mean_count + sigma_G(iSigma)^2 .* mean_count.^2;
-        dt_bin = diff(time_bin_vec);
-        [gamma, var_gain] = compute_integrals_d_prime(linear_rate, time_bin_vec, 0.2, 0.1, 2, dt, dt_bin(1), T);
         d_prime(iSigma, :) = (mean_count - mean_count(1)) ./ sqrt((var_count + var_count(1)) / 2);
 
         % compute transformed SNR
@@ -82,30 +81,3 @@ title(['Simulated linear firing rate from ' num2str(min_rate) ' - ' num2str(max_
 xlabel('Time (s)')
 ylabel('Firing rate (spikes/s)')
 axis square, grid on, box off
-
-function [gamma, var_gain] = compute_integrals_d_prime(linear_rate, time_bin_vec, tau_g, rho_g, q_g, dt, dt_bin, T)
-
-    rng(42)
-
-    gamma = zeros(1, numel(time_bin_vec));
-    var_gain = zeros(1, numel(time_bin_vec));
-    time_points_per_bin = (T / dt) / numel(time_bin_vec); 
-    for ibin = 1:size(gamma, 2)
-
-        % generate grid points
-        [T1, T2] = meshgrid(time_bin_vec(ibin), time_bin_vec(ibin));
-
-        K_g = exp(epl_kernel(T1, T2, rho_g, tau_g, q_g));
-
-        % compute gamma for variance of lambda (gamma is the second summand in the variance equation)
-        tuning_squared = linear_rate(:, ibin).* linear_rate(:, ibin);
-        gamma(:, ibin) = exp(rho_g) * dt^2 * sum(tuning_squared .* (permute(repmat(K_g, 1, 1, n_neurons), [3, 2, 1]) - 1), [2, 3]); 
-        
-        % % compute mean of gain
-        % mean_gain(ibin, itrial) = sum(exp(1/2 * rho_g));
-
-        % compute variance of gain
-        % var_gain(:, ibin) = exp(rho_g) * (dt^2 / dt_bin^2) * (sum(K_g - 1, 'all'));
-        var_gain(:, ibin) = ((dt^2 / dt_bin^2) * sum(K_g, 'all')) - 1;
-    end
-end

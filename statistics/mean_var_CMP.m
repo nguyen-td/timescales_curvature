@@ -2,7 +2,6 @@
 %
 % Inputs:
 %   tuning_curves - (n_neurons x length(x) x n_trials) Array of simulated tuning curves
-%   K_g           - (length(x) x length(x)) Covariance matrix of gain realizations 
 %   rho_g         - [double] Variance of covariance function of gain
 %   dt            - [double] Simulation time steps (in s)
 %   bin_size      - [double] Bin size (in seconds)
@@ -12,7 +11,7 @@
 %
 % Outputs:
 %   mean_spike_count - (n_neurons x n_bins x n_trials) Mean spike count per time bin
-%   var_spike_count       - (n_neurons x n_bins x n_trials) Variance per time bin
+%   var_spike_count  - (n_neurons x n_bins x n_trials) Variance per time bin
 %   mean_gain        - [double] Mean of gain
 %   var_gain         - (1 x n_bins) Variance of gain per time bin
 
