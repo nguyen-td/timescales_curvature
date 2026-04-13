@@ -17,7 +17,7 @@ max_rate = 100; % 0-100 spk/s over T seconds
 
 figure(1)
 colors = lines(numel(sigma_G)); % distinct colors for each sigma
-t = tiledlayout(4, 3, 'TileSpacing', 'loose', 'Padding', 'compact');
+t = tiledlayout(numel(time_bins), 3, 'TileSpacing', 'loose', 'Padding', 'compact');
 for ibin = 1:numel(time_bins)
     time_bin_vec = linspace(0, T, T / time_bins(ibin));
     linear_rate = linspace(min_rate, max_rate, T / time_bins(ibin));
@@ -44,7 +44,7 @@ for ibin = 1:numel(time_bins)
         snr_transformed(iSigma, :) = transformed_rate - transformed_rate(1);
 
         % plotting per sigma
-        h(iSigma) = plot(time_bin_vec, d_prime(iSigma, :), 'Color', colors(iSigma, :), 'LineWidth', 1.4); % store ONLY this
+        h(iSigma) = plot(time_bin_vec, d_prime(iSigma, :), 'Color', colors(iSigma, :), 'LineWidth', 1.4); 
 
         plot(time_bin_vec, snr_transformed(iSigma, :), '--', 'Color', colors(iSigma,:), 'LineWidth', 1.4)
     end
