@@ -18,7 +18,7 @@ dt = 0.001;                       % simulation time steps (in s)
 x = linspace(0, T, T / dt);       % dummy data points
 
 % parameters of fast population
-n_neurons = 100;                  % number of neurons within the population
+n_neurons = 20;                  % number of neurons within the population
 rho_f = 3;                       % variance of tuning curves
 tau_f = linspace(0.001, 2, 100);  % time scale of tuning curves
 
