@@ -67,7 +67,8 @@ function [gamma, var_gain] = compute_integrals(tuning_curves, tuning_curves_resh
         % mean_gain(ibin, itrial) = sum(exp(1/2 * rho_g));
 
         % compute variance of gain
-        % var_gain(:, ibin) = exp(rho_g) * (dt^2 / dt_bin^2) * (sum(K_g - 1, 'all'));
-        var_gain(:, ibin) = ((dt^2 / dt_bin^2) * sum(K_g, 'all')) - 1;
+        var_gain(:, ibin) = exp(rho_g) * (dt^2 / dt_bin^2) * (sum(K_g - 1, 'all'));
+        % var_gain(:, ibin) = ((dt^2 / dt_bin^2) * sum(K_g, 'all')) - 1;
+        % var_gain(:, ibin) = (gamma(:, ibin) / exp(rho_g)) / (dt^2 * sum(tuning_curves_reshaped(:, ibin), 'all').^2);
     end
 end

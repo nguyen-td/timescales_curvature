@@ -19,7 +19,7 @@ rho_f = 3;     % variance of tuning curves
 tau_f = 0.01;  % time scale of tuning curves
 
 % parameters of shared gain of fast population
-rho_g = [0.01, 0.1];    % [min, max] variance of gain
+rho_g = [0.01, 0.5, 2];    % [min, max] variance of gain
 tau_g = 0.002;   % time scale of gain (seconds)
 q_g = 2;         % power law exponent of gain covariance function
 
@@ -34,7 +34,6 @@ for ibin = 1:numel(time_bins)
 
     time_bin_vec = linspace(0, T, T / time_bins(ibin));
     binned_rate = linspace(min_rate, max_rate, T / time_bins(ibin));
-    mean_count = binned_rate .* time_bins(ibin);
 
     % reshape original rate to prepare for integration
     n_points_per_bin = time_bins(ibin) / dt;
@@ -48,11 +47,15 @@ for ibin = 1:numel(time_bins)
     nexttile
     hold on, box off, axis square, grid on
     for irho_g = 1:numel(rho_g)
+
+        mean_count = exp(rho_g(irho_g) / 2) * binned_rate .* time_bins(ibin);
+
+
         % compute d_prime and snr_transformed
         [var_count, var_gain] = compute_integrals(mean_count, orig_rate, reshaped_rate, n_points_per_bin, T, tau_g, rho_g(irho_g), q_g, dt, time_bins(ibin));
         d_prime(irho_g, :) = (mean_count - mean_count(1)) ./ sqrt((var_count + var_count(1)) / 2);
     
-        transformed_rate = 2 ./ var_gain .* asinh(var_gain .* sqrt(binned_rate .* time_bins(ibin)));
+        transformed_rate = 2 ./ sqrt(var_gain) .* asinh(sqrt(var_gain) .* sqrt(binned_rate .* time_bins(ibin)));
         snr_transformed(irho_g, :) = transformed_rate - transformed_rate(1);
 
         % plotting
@@ -112,7 +115,7 @@ function [var_count, var_gain] = compute_integrals(mean_count, tuning_curves, tu
 
         % compute variance of gain
         % var_gain(:, ibin) = exp(rho_g) * (dt^2 / dt_bin^2) * (sum(K_g - 1, 'all'));
-        var_gain(:, ibin) = ((dt^2 / dt_bin^2) * sum(K_g, 'all')) - 1;
+        var_gain(:, ibin) = (gamma(:, ibin) / exp(rho_g)) / (dt^2 * sum(tuning_curves_reshaped(:, ibin), 'all').^2);
     end
 
     var_count = mean_count + gamma;
